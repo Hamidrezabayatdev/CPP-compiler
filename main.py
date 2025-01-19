@@ -1,8 +1,8 @@
 import re
 
-# Define regular expressions for tokens
 token_specs = [
-    ('RESERVEDWORD', r'int|float|void|return|if|while|cin|cout|continue|break|include|using|namespace|std|main'),
+    ('PREPROCESSOR', r'#\s*include\b'),  # Matches #include
+    ('RESERVEDWORD', r'int|float|void|return|if|while|cin|cout|continue|break|using|namespace|std|main'),
     ('IDENTIFIER', r'[a-zA-Z_][a-zA-Z0-9_]*'),
     ('NUMBER', r'\d+'),
     ('STRING', r'"[^"]*"'),
