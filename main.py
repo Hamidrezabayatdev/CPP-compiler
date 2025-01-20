@@ -3,7 +3,7 @@ from collections import defaultdict
 
 
 token_specs = [
-    ('RESERVEDWORD', r'int|float|void|return|if|while|cin|cout|continue|break|using|namespace|std|main|#include'),
+    ('RESERVEDWORD', r'#include\s*<[^>]+>|int|float|void|return|if|while|cin|cout|continue|break|using|namespace|std|main'),
     ('IDENTIFIER', r'[a-zA-Z_][a-zA-Z0-9_]*'),
     ('NUMBER', r'\d+'),
     ('STRING', r'"[^"]*"'),
@@ -243,3 +243,50 @@ for non_terminal in non_terminals:
     print(f"{non_terminal}:")
     for terminal, production in parse_table[non_terminal].items():
         print(f"  {terminal} -> {production}")
+        
+# def nonrecursive_predictive_parser(input_string, parse_table, start_symbol):
+#     stack = ['$', start_symbol]  # Initialize stack with $ and start symbol
+#     input_pointer = 0  # Initialize input pointer
+#     input_tokens = input_string.split()  # Tokenize input string
+    
+#     print("Parsing Steps:")
+#     while stack:
+#         print(f"Stack: {stack}, Input: {' '.join(input_tokens[input_pointer:])}")
+#         top = stack[-1]  # Top of the stack
+#         current_input = input_tokens[input_pointer] if input_pointer < len(input_tokens) else '$'
+        
+#         if top in terminals:
+#             if top == current_input:
+#                 stack.pop()  # Match terminal
+#                 input_pointer += 1  # Move to next input symbol
+#             else:
+#                 print(f"Error: Expected {top}, found {current_input}")
+#                 return False
+#         elif top in non_terminals:
+#             if current_input in parse_table[top]:
+#                 production = parse_table[top][current_input]
+#                 stack.pop()  # Pop non-terminal
+#                 if production != 'ε':
+#                     # Push production symbols onto the stack in reverse order
+#                     for symbol in reversed(production.split()):
+#                         stack.append(symbol)
+#             else:
+#                 print(f"Error: No production for {top} with input {current_input}")
+#                 return False
+#         else:
+#             print(f"Error: Invalid symbol {top} on stack")
+#             return False
+    
+#     if input_pointer == len(input_tokens):
+#         print("Input string is valid!")
+#         return True
+#     else:
+#         print("Error: Input string is not fully parsed")
+#         return False
+
+
+# # Example Input
+# input_string = "#include <iostream> using namespace std; int main() { int x; int s = 0; while (x >= 0) { cin >> x; s = s + x; } cout << s; return 0; }"
+
+# # Run the parser
+# nonrecursive_predictive_parser(input_string, parse_table, 'Start')
