@@ -85,7 +85,7 @@ cfg_rules = {
     'Start': ['S N M'],
     'S': ['#include S', 'ε'],
     'N': ['using namespace std ;', 'ε'],
-    'M': ['int main() { T V }'],
+    'M': ['int main ( ) { T V }'],  # Updated to handle 'main', '(', and ')' as separate tokens
     'T': ['Id T', 'L T', 'Loop T', 'Input T', 'Output T', 'ε'],
     'V': ['return 0;', 'ε'],
     'Id': ['int L', 'float L'],
@@ -98,7 +98,7 @@ cfg_rules = {
     'W': ['number', 'identifier'],
     'Expression': ['Operation K Operation'],
     'K': ['==', '>=', '<=', '!='],
-    'Loop': ['while (Expression) { T }'],
+    'Loop': ['while ( Expression ) { T }'],
     'Input': ['cin >> identifier F ;'],
     'F': ['>> identifier F', 'ε'],
     'Output': ['cout << C H ;'],
@@ -255,8 +255,6 @@ def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
     output = []  # To store the sequence of productions
     index = 0  # Index to track the current input token
     
-    print(input_tokens)
-
     while stack:
         top = stack[-1]  # Get the top of the stack
 
