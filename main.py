@@ -40,7 +40,6 @@ int main() {
         s = s + x;
     }
     cout << "sum=" << s;
-    return 0;
 }
 """
 # Tokenize the C++ code
