@@ -4,9 +4,9 @@ from collections import defaultdict
 
 token_specs = [
     ('RESERVEDWORD', r'#include|int|float|void|return|if|while|cin|cout|continue|break|using|namespace|std|main'),
-    ('IDENTIFIER', r'[a-zA-Z_][a-zA-Z0-9_]*'),
-    ('NUMBER', r'\d+'),
-    ('STRING', r'"[^"]*"'),
+    ('identifier', r'[a-zA-Z_][a-zA-Z0-9_]*'),
+    ('number', r'\d+'),
+    ('string', r'"[^"]*"'),
     ('SYMBOL', r'<<|>>|>=|<=|==|!=|\+|\-|\*|\/|\(|\)|\{|\}|=|,|;|>|<|\|\||&&|!'),
     ('WHITESPACE', r'\s+'),  # Ignore whitespace
     ('UNKNOWN', r'.'),  # Catch-all for unknown characters
@@ -47,7 +47,7 @@ int main() {
 tokens = tokenize(cpp_code)
 not_sorted_tokens = tokens 
 # Define the order of token types
-token_order = ['STRING', 'NUMBER', 'SYMBOL', 'IDENTIFIER', 'RESERVEDWORD']
+token_order = ['string', 'number', 'SYMBOL', 'identifier', 'RESERVEDWORD']
 
 # Function to build the Token Table
 def build_token_table(tokens):
@@ -87,7 +87,7 @@ cfg_rules = {
     'N': ['using namespace std ;', 'ε'],
     'M': ['int main ( ) { T V }'],  # Updated to handle 'main', '(', and ')' as separate tokens
     'T': ['Id T', 'L T', 'Loop T', 'Input T', 'Output T', 'ε'],
-    'V': ['return 0;', 'ε'],
+    'V': ['return 0 ;', 'ε'],
     'Id': ['int L', 'float L'],
     'L': ['identifier Assign Z'],
     'Assign': ['= Operation', 'ε'],
@@ -246,17 +246,33 @@ for non_terminal in non_terminals:
     print(f"{non_terminal}:")
     for terminal, production in parse_table[non_terminal].items():
         print(f"  {terminal} -> {production}")
+# parse_table['T'].pop('$')
         
+# Nonrecursive Predictive Parser
 # Nonrecursive Predictive Parser
 def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
     stack = ['$', start_symbol]  # Initialize stack with $ and start symbol
-    input_tokens = [token[1] for token in tokens] + ['$']  # Extract token values and add end marker
-    current_input = input_tokens[0]  # Current input token
+    
+    # Prepare input tokens: use value for RESERVEDWORD and SYMBOL, otherwise use type
+    input_tokens = []
+    for token in tokens:
+        token_type, token_value = token
+        if token_type in ['RESERVEDWORD', 'SYMBOL']:
+            input_tokens.append(token_value)  # Use value for RESERVEDWORD and SYMBOL
+        else:
+            input_tokens.append(token_type)  # Use type for others (e.g., IDENTIFIER, NUMBER)
+    input_tokens.append('$')  # Add end marker
+    
+    current_input = input_tokens[0]  # Current input token (value or type)
     output = []  # To store the sequence of productions
     index = 0  # Index to track the current input token
     
+    print("Initial Stack:", stack)
+    print("Input Tokens:", input_tokens)
+
     while stack:
         top = stack[-1]  # Get the top of the stack
+        print(f"Stack: {stack}, Current Input: {current_input}")
 
         # If top of stack matches current input, pop and move to next input
         if top == current_input:
