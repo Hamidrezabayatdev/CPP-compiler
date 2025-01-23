@@ -3,7 +3,7 @@ from collections import defaultdict
 
 
 token_specs = [
-    ('RESERVEDWORD', r'#include|int|float|void|return|if|while|cin|cout|continue|break|using|namespace|std|main'),
+    ('RESERVEDWORD', r'#include\s*<[^>]+>|int|float|void|return|if|while|cin|cout|continue|break|using|namespace|std|main'),
     ('IDENTIFIER', r'[a-zA-Z_][a-zA-Z0-9_]*'),
     ('NUMBER', r'\d+'),
     ('STRING', r'"[^"]*"'),
@@ -29,23 +29,11 @@ def tokenize(code):
     return tokens
 
 # Example C++ code
-cpp_code = """
-#include
-using namespace std;
-int main() {
-    int x;
-    int s = 0;
-    while (x >= 0) {
-        cin >> x;
-        s = s + x;
-    }
-    cout << "sum=" << s;
-    return 0;
-}
-"""
+cpp_code = "cout << x;"
+
 # Tokenize the C++ code
 tokens = tokenize(cpp_code)
-not_sorted_tokens = tokens 
+
 # Define the order of token types
 token_order = ['STRING', 'NUMBER', 'SYMBOL', 'IDENTIFIER', 'RESERVEDWORD']
 
@@ -247,53 +235,34 @@ for non_terminal in non_terminals:
     for terminal, production in parse_table[non_terminal].items():
         print(f"  {terminal} -> {production}")
         
-# Nonrecursive Predictive Parser
 def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
-    stack = ['$', start_symbol]  # Initialize stack with $ and start symbol
+    stack = ['$', start_symbol]
     input_tokens = [token[1] for token in tokens] + ['$']  # Extract token values and add end marker
-    current_input = input_tokens[0]  # Current input token
-    output = []  # To store the sequence of productions
-    index = 0  # Index to track the current input token
+    current_input = input_tokens[0]
+    output = []
     
-    print(input_tokens)
-
     while stack:
-        top = stack[-1]  # Get the top of the stack
-
-        # If top of stack matches current input, pop and move to next input
+        top = stack[-1]
         if top == current_input:
-            stack.pop()  # Pop the matched symbol
-            index += 1  # Move to the next input token
-            current_input = input_tokens[index] if index < len(input_tokens) else '$'
-        
-        # If top is a terminal but doesn't match input, raise an error
+            stack.pop()
+            input_tokens.pop(0)
+            current_input = input_tokens[0] if input_tokens else '$'
         elif top in terminals:
-            raise SyntaxError(f"Unexpected terminal {top}. Expected {current_input}")
-        
-        # If top is a non-terminal, use the parse table to find the production
+            raise SyntaxError(f"Unexpected terminal {top}")
         elif top in non_terminals:
             if current_input in parse_table[top]:
-                production = parse_table[top][current_input]  # Get the production
-                stack.pop()  # Pop the non-terminal
-                if production != 'ε':  # If production is not epsilon, push symbols onto the stack
+                production = parse_table[top][current_input]
+                stack.pop()
+                if production != 'ε':
                     for symbol in reversed(production.split()):
                         stack.append(symbol)
-                output.append(f"{top} -> {production}")  # Add production to output
+                output.append(f"{top} -> {production}")
             else:
                 raise SyntaxError(f"No production found for {top} with input {current_input}")
-        
-        # If top is neither a terminal nor a non-terminal, raise an error
         else:
             raise SyntaxError(f"Invalid symbol {top} on stack")
-
+    
     return output
 
-# Parse the tokenized input
-try:
-    output = nonrecursive_predictive_parser(tokens, parse_table, 'Start')
-    print("Parsing Output:")
-    for line in output:
-        print(line)
-except SyntaxError as e:
-    print(f"Syntax Error: {e}")
-    
+# Run the parser
+# nonrecursive_predictive_parser(tokens , parse_table, 'Start')
