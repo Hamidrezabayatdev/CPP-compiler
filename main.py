@@ -297,6 +297,12 @@ def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
             if top == "identifier":
                 output.append(f"{top} -> {identifier_list[0]}")
                 identifier_list.pop(0)
+            elif top == "number":
+                output.append(f"{top} -> {number_list[0]}")
+                number_list.pop(0)
+            elif top == "string":
+                output.append(f"{top} -> {string_list[0]}")
+                string_list.pop(0)
             stack.pop()  # Pop the matched symbol
             index += 1  # Move to the next input token
             current_input = input_tokens[index] if index < len(input_tokens) else '$'
