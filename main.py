@@ -1,3 +1,4 @@
+import copy
 import re
 from collections import defaultdict
 
@@ -337,3 +338,73 @@ try:
         print(line)
 except SyntaxError as e:
     print(f"Syntax Error: {e}")
+
+# print("oooooooooo:", output)
+
+# output2 = copy.deepcopy(output)
+# outputR = output2[::-1]
+def build_parse_tree(output):
+    """
+    Builds a parse tree from the sequence of productions.
+    :param output: List of productions in the format "A -> B C D"
+    :return: Root of the parse tree
+    """
+    # Initialize the root node
+    root = {"name": "Start", "children": []}
+    stack = [root]  # Stack to keep track of the current node
+
+    for production in output:
+        lhs, rhs = production.split(" -> ")
+        rhs_symbols = rhs.split()
+
+        # Find the node corresponding to the LHS
+        current_node = None
+        for node in stack:
+            # print("fornode:", node)
+            if node["name"] == lhs:
+                current_node = node
+                break
+
+        if not current_node:
+            # If the LHS node doesn't exist, create it and add it to the root's children
+            current_node = {"name": lhs, "children": []}
+            root["children"].append(current_node)
+
+        # Push the current node onto the stack
+        stack.append(current_node)
+
+        # Add the RHS symbols as children of the current node
+        for symbol in rhs_symbols:
+            if symbol != "ε":  # Skip epsilon productions
+                child_node = {"name": symbol, "children": []}
+                current_node["children"].append(child_node)
+                stack.append(child_node)
+
+        # Pop the current node from the stack
+        stack.pop()
+
+    return root
+
+def print_tree(node, prefix="", is_last=True):
+    """
+    Prints the parse tree in a hierarchical format with dashes and vertical bars.
+    :param node: Current node in the tree
+    :param prefix: Prefix for the current line (used for indentation)
+    :param is_last: Whether the current node is the last child of its parent
+    """
+    # Print the current node
+    print(prefix + ("└── " if is_last else "├── ") + node["name"])
+
+    # Update the prefix for children
+    prefix += "    " if is_last else "│   "
+
+    # Recursively print children
+    for i, child in enumerate(node["children"]):
+        print_tree(child, prefix, i == len(node["children"]) - 1)
+
+# Build the parse tree
+parse_tree_root = build_parse_tree(output)
+
+# Print the parse tree
+print("Parse Tree:")
+print(parse_tree_root)
