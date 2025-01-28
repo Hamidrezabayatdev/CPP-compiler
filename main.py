@@ -441,68 +441,37 @@ class ParseTreeNode:
         last_node = None  # Initialize last_node to None
         dfs(self)  # Start DFS from the current node (root of the subtree)
         return last_node  # Return the last node with the matching symbol
-# before build recommended fix
+
 def build_parse_tree(output):
     # Initialize the root node with the start symbol
     root = ParseTreeNode("Start", unique_id=0)
-    node_stack = ["Start"]
-    current_id = 0  # Unique ID counter
-    def find_last_occurrence_and_create_node(root, symbol):
-        # Find the last occurrence of the symbol in the tree
-        last_node = root.last_occurrence(symbol)
-
-        if last_node:
-            # Create a new node with the symbol and the unique_id of the last occurrence
-            new_node = ParseTreeNode(symbol, unique_id=last_node.unique_id)
-            return new_node.unique_id
-        else:
-            # If the symbol is not found, return None
-            return current_id
-        
+    node_stack = [root]  # Stack to track nodes during tree construction
+    current_id = 1  # Unique ID counter (start from 1 since root has ID 0)
 
     for index, production in enumerate(output):
         parent_symbol = production[0]
         children_symbols = production[1]
 
-        # # Find the parent node in the stack
-        # while node_stack and node_stack[-1].symbol in terminals:
-        #     node_stack.pop()
+        # Find the parent node in the stack
+        while node_stack and node_stack[-1].symbol != parent_symbol:
+            node_stack.pop()  # Pop nodes until we find the correct parent
 
         if not node_stack:
             raise ValueError(f"Invalid production sequence: No parent found for {parent_symbol}")
-        current_node = node_stack[-1]
-        while node_stack[-1] in terminals:
-            node_stack.pop()
-            if len(node_stack) == 0:
-                return root
-        # current_node = node_stack[-1]
-        # while parent_symbol != current_node:
-        #     node_stack.pop()
-        current_node = node_stack[-1]
-        if current_node == "Start":
-            current_node = root
-        else:
-            current_node = ParseTreeNode(current_node, unique_id = find_last_occurrence_and_create_node(root, current_node))
-        current_id += 1
+
+        current_node = node_stack[-1]  # Get the current parent node
+
         # Add children to the current node
-        for symbol in children_symbols:
+        for symbol in reversed(children_symbols):
             if symbol == 'ε':
                 continue  # Skip epsilon productions
+
+            # Create a new child node
             child_node = ParseTreeNode(symbol, unique_id=current_id)
             current_node.add_child(child_node)
-            # node_stack.append(child_node)  # Push the child node onto the stack
+            node_stack.append(child_node)  # Push the child node onto the stack
             current_id += 1  # Increment unique ID
 
-        # Pop the current node from the stack ONLY if it has no more children to process
-        # This ensures that nodes like 'M' and 'N' are not popped prematurely
-
-        node_stack.pop()
-        print(current_node.show_children())
-        for child in reversed(children_symbols):
-            if child != "ε":
-                node_stack.append(child)
-        if len(node_stack) == 0:
-            return root
     return root
 
 
