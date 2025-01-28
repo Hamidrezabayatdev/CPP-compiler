@@ -29,7 +29,7 @@ def tokenize(code):
         tokens.append((kind, value))
     return tokens
 
-# Example C++ code
+
 cpp_code = """
 #include
 using namespace std;
@@ -44,9 +44,66 @@ int main() {
     return 0 ;
 }
 """
+
+def check_wrong_initialization_and_assignment(code):
+    errors = []
+    # Regex to find variable declarations and assignments
+    int_declaration_pattern = r'int\s+(\w+)\s*=\s*("[^"]*"|\d+)'
+    string_declaration_pattern = r'string\s+(\w+)\s*=\s*(\d+)'
+    int_assignment_pattern = r'(\w+)\s*=\s*("[^"]*")'
+    string_assignment_pattern = r'(\w+)\s*=\s*(\d+)'
+
+    # Check for wrong initializations
+    int_declaration_matches = re.findall(int_declaration_pattern, code)
+    for var_name, value in int_declaration_matches:
+        if value.startswith('"'):
+            errors.append(f"Wrong initialization: '{var_name}' is an int but is assigned a string value '{value}'")
+    string_declaration_matches = re.findall(string_declaration_pattern, code)
+    for var_name, value in string_declaration_matches:
+        errors.append(f"Wrong initialization: '{var_name}' is a string but is assigned a numeric value '{value}'")
+
+    # Check for wrong assignments
+    int_assignment_matches = re.findall(int_assignment_pattern, code)
+    for var_name, value in int_assignment_matches:
+        # Check if the variable was declared as an int earlier
+        if re.search(r'int\s+' + var_name + r'\s*[;=]', code):
+            errors.append(f"Wrong assignment: '{var_name}' is an int but is assigned a string value '{value}'")
+
+    string_assignment_matches = re.findall(string_assignment_pattern, code)
+    for var_name, value in string_assignment_matches:
+        # Check if the variable was declared as a string earlier
+        if re.search(r'string\s+' + var_name + r'\s*[;=]', code):
+            errors.append(f"SyntaxError: Wrong assignment: '{var_name}' is a string but is assigned a numeric value '{value}'")
+
+        if errors:
+            raise SyntaxError("\n".join(errors))
+
+def check_missing_semicolon(code):
+    lines = code.split('\n')
+    for i, line in enumerate(lines):
+        # Skip lines that are preprocessor directives, comments, or empty lines
+        if line.strip().startswith('#') or line.strip().startswith('//') or line.strip() == '':
+            continue
+        # Check if the line ends with a semicolon
+        if not line.strip().endswith(';') and not line.strip().endswith('{') and not line.strip().endswith('}'):
+            raise SyntaxError(f"SyntaxError: Missing semicolon at line {i+1}: {line.strip()}")
+
+try:
+    check_wrong_initialization_and_assignment(cpp_code)
+except SyntaxError as e:
+    print(e)
+    exit()
+try:
+    check_missing_semicolon(cpp_code)
+except SyntaxError as e:
+    print(e)
+    exit()
+
+
 # Tokenize the C++ code
 tokens = tokenize(cpp_code)
-not_sorted_tokens = tokens 
+print("tokens:", tokens)
+not_sorted_tokens = tokens
 # Define the order of token types
 token_order = ['string', 'number', 'SYMBOL', 'identifier', 'RESERVEDWORD']
 
@@ -254,7 +311,7 @@ for non_terminal in non_terminals:
 number_list = []
 string_list = []
 identifier_list = []
-
+neighbors_dict = {}
 
 # Nonrecursive Predictive Parser
 def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
@@ -274,16 +331,16 @@ def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
                 identifier_list.append(token_value)
             if token_type == "string" :
                 string_list.append(token_value)
-
             input_tokens.append(token_type)  # Use type for others (e.g., IDENTIFIER, NUMBER)
     input_tokens.append('$')  # Add end marker
     
     current_input = input_tokens[0]  # Current input token (value or type)
+    
     output = []  # To store the sequence of productions
     index = 0  # Index to track the current input token
-    print("numList: ", number_list)
-    print("strList", string_list)
-    print("identifierList: ", identifier_list)
+    # print("numList: ", number_list)
+    # print("strList", string_list)
+    # print("identifierList: ", identifier_list)
 
     
     print("Initial Stack:", stack)
@@ -297,9 +354,11 @@ def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
         if top == current_input:
             if top == "identifier":
                 output.append(f"{top} -> {identifier_list[0]}")
+                neighbors_dict[top] = identifier_list[0]
                 identifier_list.pop(0)
             elif top == "number":
                 output.append(f"{top} -> {number_list[0]}")
+                neighbors_dict[top] = number_list[0]
                 number_list.pop(0)
             elif top == "string":
                 output.append(f"{top} -> {string_list[0]}")
@@ -339,72 +398,5 @@ try:
 except SyntaxError as e:
     print(f"Syntax Error: {e}")
 
-# print("oooooooooo:", output)
+#################b treeeeeeeeeeeeeeeeeee
 
-# output2 = copy.deepcopy(output)
-# outputR = output2[::-1]
-def build_parse_tree(output):
-    """
-    Builds a parse tree from the sequence of productions.
-    :param output: List of productions in the format "A -> B C D"
-    :return: Root of the parse tree
-    """
-    # Initialize the root node
-    root = {"name": "Start", "children": []}
-    stack = [root]  # Stack to keep track of the current node
-
-    for production in output:
-        lhs, rhs = production.split(" -> ")
-        rhs_symbols = rhs.split()
-
-        # Find the node corresponding to the LHS
-        current_node = None
-        for node in stack:
-            # print("fornode:", node)
-            if node["name"] == lhs:
-                current_node = node
-                break
-
-        if not current_node:
-            # If the LHS node doesn't exist, create it and add it to the root's children
-            current_node = {"name": lhs, "children": []}
-            root["children"].append(current_node)
-
-        # Push the current node onto the stack
-        stack.append(current_node)
-
-        # Add the RHS symbols as children of the current node
-        for symbol in rhs_symbols:
-            if symbol != "ε":  # Skip epsilon productions
-                child_node = {"name": symbol, "children": []}
-                current_node["children"].append(child_node)
-                stack.append(child_node)
-
-        # Pop the current node from the stack
-        stack.pop()
-
-    return root
-
-def print_tree(node, prefix="", is_last=True):
-    """
-    Prints the parse tree in a hierarchical format with dashes and vertical bars.
-    :param node: Current node in the tree
-    :param prefix: Prefix for the current line (used for indentation)
-    :param is_last: Whether the current node is the last child of its parent
-    """
-    # Print the current node
-    print(prefix + ("└── " if is_last else "├── ") + node["name"])
-
-    # Update the prefix for children
-    prefix += "    " if is_last else "│   "
-
-    # Recursively print children
-    for i, child in enumerate(node["children"]):
-        print_tree(child, prefix, i == len(node["children"]) - 1)
-
-# Build the parse tree
-parse_tree_root = build_parse_tree(output)
-
-# Print the parse tree
-print("Parse Tree:")
-print(parse_tree_root)
