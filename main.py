@@ -9,8 +9,8 @@ token_specs = [
     ('number', r'\d+'),
     ('string', r'"[^"]*"'),
     ('SYMBOL', r'<<|>>|>=|<=|==|!=|\+|\-|\*|\/|\(|\)|\{|\}|=|,|;|>|<|\|\||&&|!'),
-    ('WHITESPACE', r'\s+'),  # Ignore whitespace
-    ('UNKNOWN', r'.'),  # Catch-all for unknown characters
+    ('WHITESPACE', r'\s+'),
+    ('UNKNOWN', r'.')
 ]
 
 # Combine all regular expressions into one
@@ -23,7 +23,7 @@ def tokenize(code):
         kind = match.lastgroup
         value = match.group()
         if kind == 'WHITESPACE':
-            continue  # Skip whitespace
+            continue  
         elif kind == 'UNKNOWN':
             raise SyntaxError(f'Unknown token: {value}')
         tokens.append((kind, value))
@@ -47,7 +47,6 @@ int main() {
 
 def check_wrong_initialization_and_assignment(code):
     errors = []
-    # Regex to find variable declarations and assignments
     int_declaration_pattern = r'int\s+(\w+)\s*=\s*("[^"]*"|\d+)'
     string_declaration_pattern = r'string\s+(\w+)\s*=\s*(\d+)'
     int_assignment_pattern = r'(\w+)\s*=\s*("[^"]*")'
@@ -81,10 +80,9 @@ def check_wrong_initialization_and_assignment(code):
 def check_missing_semicolon(code):
     lines = code.split('\n')
     for i, line in enumerate(lines):
-        # Skip lines that are preprocessor directives, comments, or empty lines
-        if line.strip().startswith('#') or line.strip().startswith('//') or line.strip() == '':
+        if line.strip().startswith('#') or line.strip() == '':
             continue
-        # Check if the line ends with a semicolon
+        # Check for the line ends with a semicolon
         if not line.strip().endswith(';') and not line.strip().endswith('{') and not line.strip().endswith('}'):
             raise SyntaxError(f"SyntaxError: Missing semicolon at line {i+1}: {line.strip()}")
 
@@ -102,7 +100,11 @@ except SyntaxError as e:
 
 # Tokenize the C++ code
 tokens = tokenize(cpp_code)
-print("tokens:", tokens)
+print("tokens:")
+# print(tokens)
+for token in tokens:
+    print(token)
+print("-----------------------------------")
 not_sorted_tokens = tokens
 # Define the order of token types
 token_order = ['string', 'number', 'SYMBOL', 'identifier', 'RESERVEDWORD']
@@ -116,12 +118,10 @@ def build_token_table(tokens):
 
 # Function to sort the Token Table based on token order and ASCII value
 def sort_token_table(token_table, token_order):
-    # Create a dictionary to map token types to their priority
     priority = {token_type: idx for idx, token_type in enumerate(token_order)}
     
     # Sort the token table:
-    # 1. First by token priority (to group tokens of the same type together)
-    # 2. Then by Token Value in ASCII order (to sort tokens within the same group)
+
     sorted_table = sorted(token_table, key=lambda x: (priority[x['Token Name']], x['Token Value']))
     return sorted_table
 
@@ -137,7 +137,7 @@ print("{:<15} {:<15}".format("Token Name", "Token Value"))
 print("-" * 30)
 for entry in sorted_token_table:
     print("{:<15} {:<15}".format(entry['Token Name'], entry['Token Value']))
-    
+print("-----------------------------------")
 # Define the CFG rules
 cfg_rules = {
     'Start': ['S N M'],
@@ -173,7 +173,7 @@ terminals = {
 
 non_terminals = set(cfg_rules.keys())
 
-# Function to compute FIRST sets
+# Function to compute FIRST
 def compute_first(cfg_rules, terminals, non_terminals):
     first = defaultdict(set)
     
@@ -203,12 +203,12 @@ def compute_first(cfg_rules, terminals, non_terminals):
     
     return first
 
-# Compute FIRST sets
+# Compute FIRST set
 first_sets = compute_first(cfg_rules, terminals, non_terminals)
 
 def compute_follow(cfg_rules, first_sets, start_symbol):
     follow = defaultdict(set)
-    follow[start_symbol].add('$')  # Rule 1: Add $ to FOLLOW of start symbol
+    follow[start_symbol].add('$')
     
     while True:
         updated = False
@@ -219,7 +219,6 @@ def compute_follow(cfg_rules, first_sets, start_symbol):
                 
                 for i, symbol in enumerate(production_symbols):
                     if symbol in non_terminals:
-                        # Rule 2: A -> αBβ
                         if i + 1 < len(production_symbols):
                             next_symbol = production_symbols[i + 1]
                             if next_symbol in terminals:
@@ -245,21 +244,21 @@ def compute_follow(cfg_rules, first_sets, start_symbol):
     
     return follow
 
-# Compute FOLLOW sets
+# Compute FOLLOW set
 follow_sets = compute_follow(cfg_rules, first_sets, 'Start')
 
-# Print FIRST sets
+# Print FIRST set
 print("FIRST Sets:")
 for non_terminal, first_set in first_sets.items():
     print(f'FIRST({non_terminal}) = {first_set}')
-
-# Print FOLLOW sets
+print("-----------------------------------")
+# Print FOLLOW set
 print("FOLLOW Sets:")
 for non_terminal, follow_set in follow_sets.items():
     print(f'FOLLOW({non_terminal}) = {follow_set}')
+print("-----------------------------------")
 
-
-# Function to build the Parse Table
+# build the Parse Table
 def build_parse_table(cfg_rules, first_sets, follow_sets, terminals, non_terminals):
     parse_table = defaultdict(dict)
     
@@ -268,7 +267,7 @@ def build_parse_table(cfg_rules, first_sets, follow_sets, terminals, non_termina
             first_alpha = set()
             production_symbols = production.split()
             
-            # Compute FIRST(α) for the production
+            # Compute FIRST for the production
             for symbol in production_symbols:
                 if symbol in terminals:
                     first_alpha.add(symbol)
@@ -283,12 +282,10 @@ def build_parse_table(cfg_rules, first_sets, follow_sets, terminals, non_termina
             else:
                 first_alpha.add('ε')
             
-            # Add production to M[A, a] for each terminal in FIRST(α)
             for terminal in first_alpha:
                 if terminal != 'ε':
                     parse_table[non_terminal][terminal] = production
             
-            # If ε is in FIRST(α), add production to M[A, b] for each terminal in FOLLOW(A)
             if 'ε' in first_alpha:
                 for terminal in follow_sets[non_terminal]:
                     parse_table[non_terminal][terminal] = production
@@ -305,6 +302,7 @@ for non_terminal in non_terminals:
     for terminal, production in parse_table[non_terminal].items():
         print(f"  {terminal} -> {production}")
 # parse_table['T'].pop('$')
+print("-----------------------------------")
 
 
 
@@ -319,14 +317,13 @@ neighbors_dict = {}
 
 # Nonrecursive Predictive Parser
 def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
-    stack = ['$', start_symbol]  # Initialize stack with $ and start symbol
+    stack = ['$', start_symbol]
 
-    # Prepare input tokens: use value for RESERVEDWORD and SYMBOL, otherwise use type
     input_tokens = []
     for token in tokens:
         token_type, token_value = token
         if token_type in ['RESERVEDWORD', 'SYMBOL']:
-            input_tokens.append(token_value)  # Use value for RESERVEDWORD and SYMBOL
+            input_tokens.append(token_value)
         else:
             if token_type == "number" :
                 number_list.append(token_value)
@@ -334,26 +331,26 @@ def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
                 identifier_list.append(token_value)
             if token_type == "string" :
                 string_list.append(token_value)
-            input_tokens.append(token_type)  # Use type for others (e.g., IDENTIFIER, NUMBER)
-    input_tokens.append('$')  # Add end marker
+            input_tokens.append(token_type)
+    input_tokens.append('$')
     
-    current_input = input_tokens[0]  # Current input token (value or type)
+    current_input = input_tokens[0]
     
-    output = []  # To store the sequence of productions
-    index = 0  # Index to track the current input token
+    output = []  # To save the list of productions
+    index = 0
     # print("numList: ", number_list)
     # print("strList", string_list)
     # print("identifierList: ", identifier_list)
 
     
-    print("Initial Stack:", stack)
-    print("Input Tokens:", input_tokens)
+    # print("Initial Stack:", stack)
+    # print("Input Tokens:", input_tokens)
 
     while stack:
-        top = stack[-1]  # Get the top of the stack
-        print(f"Stack: {stack}, Current Input: {current_input}")
+        top = stack[-1]
+        # print(f"Stack: {stack}, Current Input: {current_input}")
         # current_node = node_stack[-1]
-        # If top of stack matches current input, pop and move to next input
+
         if top == current_input:
             if top == "identifier":
                 output.append(f"{top} -> {identifier_list[0]}")
@@ -366,28 +363,25 @@ def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
             elif top == "string":
                 output.append(f"{top} -> {string_list[0]}")
                 string_list.pop(0)
-            stack.pop()  # Pop the matched symbol
+            stack.pop()
             # current_node.add_child(ParseTreeNode(input_tokens[index]))
-            index += 1  # Move to the next input token
+            index += 1
             current_input = input_tokens[index] if index < len(input_tokens) else '$'
         
-        # If top is a terminal but doesn't match input, raise an error
         elif top in terminals:
             raise SyntaxError(f"Unexpected terminal {top}. Expected {current_input}")
         
-        # If top is a non-terminal, use the parse table to find the production
         elif top in non_terminals:
             if current_input in parse_table[top]:
-                production = parse_table[top][current_input]  # Get the production
-                stack.pop()  # Pop the non-terminal
-                if production != 'ε':  # If production is not epsilon, push symbols onto the stack
+                production = parse_table[top][current_input]
+                stack.pop()
+                if production != 'ε':
                     for symbol in reversed(production.split()):
                         stack.append(symbol)
                 output.append(f"{top} -> {production}")  # Add production to output
             else:
                 raise SyntaxError(f"No production found for {top} with input {current_input}")
         
-        # If top is neither a terminal nor a non-terminal, raise an error
         else:
             raise SyntaxError(f"Invalid symbol {top} on stack")
 
@@ -401,7 +395,7 @@ try:
         print(line)
 except SyntaxError as e:
     print(f"Syntax Error: {e}")
-
+print("-----------------------------------")
 for i in range(len(output)):
     output[i] = output[i].split(" -> ")
 for i in range(len(output)):
@@ -415,7 +409,7 @@ class ParseTreeNode:
     def __init__(self, symbol, unique_id=None):
         self.symbol = symbol
         self.children = []
-        self.unique_id = unique_id  # Unique identifier for handling repeated nodes
+        self.unique_id = unique_id
 
     def add_child(self, child):
         self.children.append(child)
@@ -430,17 +424,16 @@ class ParseTreeNode:
         return f"tree root is {self}"
 
     def last_occurrence(self, symbol):
-        # Helper function for DFS traversal
         def dfs(node):
             nonlocal last_node
             if node.symbol == symbol:
-                last_node = node  # Update last_node if the current node matches the symbol
+                last_node = node
             for child in node.children:
-                dfs(child)  # Recursively traverse children
+                dfs(child)
 
-        last_node = None  # Initialize last_node to None
-        dfs(self)  # Start DFS from the current node (root of the subtree)
-        return last_node  # Return the last node with the matching symbol
+        last_node = None
+        dfs(self)
+        return last_node
 
 
 class SearchInTree:
@@ -460,7 +453,7 @@ class SearchInTree:
                 l_node = current_node.children[0]  
                 
                 result = self.process_l_node(variable_type, l_node, identifier_to_find)
-                if result:  # If declaration is found, return it
+                if result:
                     return result
 
             stack.extend(current_node.children)
@@ -475,11 +468,9 @@ class SearchInTree:
         while stack:
             current_node = stack.pop()
 
-            # Set identifier_parent when finding the first identifier node
             if not identifier_parent or any(child.symbol == "identifier" for child in current_node.children):
                 identifier_parent = current_node
 
-            # Skip nodes that are not in the non-terminal list
             if current_node.symbol not in self.non_terminals:
                 continue
 
@@ -534,10 +525,9 @@ class SearchInTree:
 
 
 def build_parse_tree(output):
-    # Initialize the root node with the start symbol
     root = ParseTreeNode("Start", unique_id=0)
-    node_stack = [root]  # Stack to track nodes during tree construction
-    current_id = 1  # Unique ID counter (start from 1 since root has ID 0)
+    node_stack = [root]
+    current_id = 1
 
     for index, production in enumerate(output):
         parent_symbol = production[0]
@@ -545,23 +535,19 @@ def build_parse_tree(output):
 
         # Find the parent node in the stack
         while node_stack and node_stack[-1].symbol != parent_symbol:
-            node_stack.pop()  # Pop nodes until we find the correct parent
+            node_stack.pop()
 
-        if not node_stack:
-            raise ValueError(f"Invalid production sequence: No parent found for {parent_symbol}")
 
-        current_node = node_stack[-1]  # Get the current parent node
+        current_node = node_stack[-1]
 
         # Add children to the current node
         for symbol in reversed(children_symbols):
             if symbol == 'ε':
-                continue  # Skip epsilon productions
-
-            # Create a new child node
+                continue
             child_node = ParseTreeNode(symbol, unique_id=current_id)
             current_node.add_child(child_node)
-            node_stack.append(child_node)  # Push the child node onto the stack
-            current_id += 1  # Increment unique ID
+            node_stack.append(child_node)
+            current_id += 1
 
     return root
 
@@ -572,35 +558,32 @@ def export_parse_tree_to_png(root, filename="parse_tree"):
     dot = Digraph(comment="Parse Tree")
 
     def add_nodes_edges(node):
-        # Add the current node to the graph
         dot.node(str(node.unique_id), label=node.symbol)
-        # Recursively add children
         for child in node.children:
             dot.edge(str(node.unique_id), str(child.unique_id))
             add_nodes_edges(child)
 
-    # Start adding nodes and edges from the root
     add_nodes_edges(root)
 
-    # Render and save the graph as a PNG file
     dot.render(filename, format="png", cleanup=True)
     print(f"Parse tree exported to {filename}.png")
 
 
-    # Build the parse tree from the output
+# Build the parse tree
 parse_tree_root = build_parse_tree(output)
-# Export the parse tree to a PNG file
+# Save parse tree
 export_parse_tree_to_png(parse_tree_root, filename="parse_tree")
-# Search an specific element declaration in code
+print("-----------------------------------")
+# Search an element declaration in code
 non_terminals.update(["identifier", "string", "number"])
 search_in_tree = SearchInTree(parse_tree_root, non_terminals= non_terminals)
 variable_for_find = "s"
 declaration = search_in_tree.find_declaration(variable_for_find)
 if declaration:
-    print(declaration)
+    print(f"{variable_for_find} first declaration was: {declaration}")
 else:
     print(f"Identifier '{variable_for_find}' not found in the parse tree.")
-
+print("-----------------------------------")
 
 
 
