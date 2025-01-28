@@ -441,7 +441,7 @@ class ParseTreeNode:
         last_node = None  # Initialize last_node to None
         dfs(self)  # Start DFS from the current node (root of the subtree)
         return last_node  # Return the last node with the matching symbol
-
+# before build recommended fix
 def build_parse_tree(output):
     # Initialize the root node with the start symbol
     root = ParseTreeNode("Start", unique_id=0)
