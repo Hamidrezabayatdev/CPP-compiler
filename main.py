@@ -305,7 +305,32 @@ for non_terminal in non_terminals:
     for terminal, production in parse_table[non_terminal].items():
         print(f"  {terminal} -> {production}")
 # parse_table['T'].pop('$')
-        
+
+
+
+
+
+class ParseTreeNode:
+    def __init__(self, symbol):
+        self.symbol = symbol
+        self.children = []
+
+    def add_child(self, child):
+        self.children.append(child)
+
+    def __repr__(self, level=0, prefix=""):
+        if self.symbol == "ε":
+            return ""
+
+        ret = f"{prefix}├──  {repr(self.symbol)}\n"
+
+        for i, child in enumerate(self.children):
+            if i == len(self.children) - 1:
+                ret += child.__repr__(level + 1, prefix + "    ")
+            else:
+                ret += child.__repr__(level + 1, prefix + "│   ")
+
+        return ret       
 # Nonrecursive Predictive Parser
 
 number_list = []
@@ -316,7 +341,6 @@ neighbors_dict = {}
 # Nonrecursive Predictive Parser
 def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
     stack = ['$', start_symbol]  # Initialize stack with $ and start symbol
-    
 
     # Prepare input tokens: use value for RESERVEDWORD and SYMBOL, otherwise use type
     input_tokens = []
@@ -349,7 +373,7 @@ def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
     while stack:
         top = stack[-1]  # Get the top of the stack
         print(f"Stack: {stack}, Current Input: {current_input}")
-
+        # current_node = node_stack[-1]
         # If top of stack matches current input, pop and move to next input
         if top == current_input:
             if top == "identifier":
@@ -364,6 +388,7 @@ def nonrecursive_predictive_parser(tokens, parse_table, start_symbol):
                 output.append(f"{top} -> {string_list[0]}")
                 string_list.pop(0)
             stack.pop()  # Pop the matched symbol
+            # current_node.add_child(ParseTreeNode(input_tokens[index]))
             index += 1  # Move to the next input token
             current_input = input_tokens[index] if index < len(input_tokens) else '$'
         
@@ -398,5 +423,87 @@ try:
 except SyntaxError as e:
     print(f"Syntax Error: {e}")
 
-#################b treeeeeeeeeeeeeeeeeee
+for i in range(len(output)):
+    output[i] = output[i].split(" -> ")
+for i in range(len(output)):
+    output[i][1] = output[i][1].split(" ")
 
+# print("Parsing Output:")
+# print(output)
+
+#################b treeeeeeeeeeeeeeeeeee
+class ParseTreeNode:
+    def __init__(self, symbol, unique_id=None):
+        self.symbol = symbol
+        self.children = []
+        self.unique_id = unique_id  # Unique identifier for handling repeated nodes
+
+    def add_child(self, child):
+        self.children.append(child)
+
+    def __repr__(self):
+        return f"{self.symbol} (ID: {self.unique_id})"
+    
+
+def build_parse_tree(output):
+    # Initialize the root node with the start symbol
+    root = ParseTreeNode("Start", unique_id=0)
+    node_stack = [root]
+    current_id = 1  # Unique ID counter
+
+    for production in output:
+        parent_symbol = production[0]
+        children_symbols = production[1]
+
+        # Find the parent node in the stack
+        while node_stack and node_stack[-1].symbol in terminals:
+            node_stack.pop()
+
+        if not node_stack:
+            raise ValueError(f"Invalid production sequence: No parent found for {parent_symbol}")
+
+        current_node = node_stack[-1]
+
+        # Add children to the current node
+        for symbol in children_symbols:
+            if symbol == 'ε':
+                continue  # Skip epsilon productions
+            child_node = ParseTreeNode(symbol, unique_id=current_id)
+            current_node.add_child(child_node)
+            node_stack.append(child_node)  # Push the child node onto the stack
+            current_id += 1  # Increment unique ID
+
+        # Pop the current node from the stack ONLY if it has no more children to process
+        # This ensures that nodes like 'M' and 'N' are not popped prematurely
+        if current_node != root:  # Don't pop the root node
+            node_stack.pop()
+
+    return root
+
+
+from graphviz import Digraph
+
+def export_parse_tree_to_png(root, filename="parse_tree"):
+    dot = Digraph(comment="Parse Tree")
+
+    def add_nodes_edges(node):
+        # Add the current node to the graph
+        dot.node(str(node.unique_id), label=node.symbol)
+        # Recursively add children
+        for child in node.children:
+            dot.edge(str(node.unique_id), str(child.unique_id))
+            add_nodes_edges(child)
+
+    # Start adding nodes and edges from the root
+    add_nodes_edges(root)
+
+    # Render and save the graph as a PNG file
+    dot.render(filename, format="png", cleanup=True)
+    print(f"Parse tree exported to {filename}.png")
+
+
+    # Build the parse tree from the output
+parse_tree_root = build_parse_tree(output)
+
+# Export the parse tree to a PNG file
+export_parse_tree_to_png(parse_tree_root, filename="parse_tree")
